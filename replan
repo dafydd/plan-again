@@ -27,8 +27,15 @@ if [ "$plan_mode" != "600" ]; then
   exit 1
 fi
 
-if ! ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
-  echo "[replan] ERROR: SSH to git@github.com failed."
+echo "[replan] Testing GitHub SSH connectivity..."
+ssh -T git@github.com  || exit_code=$?
+exit_code=$?
+echo "[replan] ssh exit code: $exit_code"
+
+if [[ "$exit_code" -eq 0 ]]; then
+  echo "[replan] SSH connection to GitHub succeeded."
+else
+  echo "[replan] ERROR: SSH to git@github.com failed with exit code $exit_code"
   echo "         Make sure your SSH key is loaded (e.g. with ssh-add)."
   exit 1
 fi
