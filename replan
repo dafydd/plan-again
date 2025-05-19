@@ -1,0 +1,73 @@
+#!/bin/bash
+set -euo pipefail
+
+# --------- CONFIGURATION ---------
+DEST_REPO="$HOME/PATH_TO_REPO/YOUR_GITHUB_USERNAME"
+
+TARGET_FILE="$DEST_REPO/README.md"
+BRANCH="main"
+SOURCE="$HOME/.plan"
+# ---------------------------------
+
+if [ ! -f "$SOURCE" ]; then
+  echo "[replan] ERROR: $SOURCE does not exist."
+  exit 1
+fi
+
+if [[ "$(uname)" == "Darwin" ]]; then
+  plan_mode=$(stat -f "%Lp" "$SOURCE")
+else
+  plan_mode=$(stat -c "%a" "$SOURCE")
+fi
+
+if [ "$plan_mode" != "600" ]; then
+  echo "[replan] ERROR: $SOURCE must have mode 600 (rw-------)"
+  echo "         Current mode: $plan_mode"
+  echo "         Run: chmod 600 $SOURCE"
+  exit 1
+fi
+
+if ! ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+  echo "[replan] ERROR: SSH to git@github.com failed."
+  echo "         Make sure your SSH key is loaded (e.g. with ssh-add)."
+  exit 1
+fi
+
+cd "$DEST_REPO"
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "[replan] WARNING: You have uncommitted changes in $DEST_REPO."
+  echo "         They will be ignored unless related to README.md."
+fi
+
+echo "[replan] Pulling latest changes from origin/$BRANCH..."
+if ! git pull --ff-only origin "$BRANCH"; then
+  echo "[replan] ERROR: Cannot fast-forward. Resolve manually."
+  exit 1
+fi
+
+echo "[replan] Comparing $SOURCE to $TARGET_FILE..."
+if diff -u "$SOURCE" "$TARGET_FILE"; then
+  echo "[replan] No differences. Nothing to do."
+  exit 0
+else
+  echo "[replan] Detected differences."
+fi
+
+if [[ "${1:-}" == "-c" ]]; then
+  echo "[replan] Committing and pushing..."
+
+  cp "$SOURCE" "$TARGET_FILE"
+  git add "$TARGET_FILE"
+
+  iso_timestamp=$(date -u +"%Y-%m-%dT%H:%MZ")
+
+  git commit -m "Update .plan ($iso_timestamp)"
+  git push origin "$BRANCH"
+
+  echo "[replan] Update pushed successfully."
+else
+  echo "[replan] Run with '-c' to commit and push the change."
+  exit 1
+fi
+
