@@ -27,10 +27,8 @@ if [ "$plan_mode" != "600" ]; then
   exit 1
 fi
 
-echo "[replan] Testing GitHub SSH connectivity..."
-ssh -T git@github.com  || exit_code=$?
+ssh -T git@github.com >/dev/null 2>&1  || exit_code=$?
 exit_code=$?
-echo "[replan] ssh exit code: $exit_code"
 
 if [[ "$exit_code" -eq 0 ]]; then
   echo "[replan] SSH connection to GitHub succeeded."
@@ -48,14 +46,13 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 
 echo "[replan] Pulling latest changes from origin/$BRANCH..."
-if ! git pull --ff-only origin "$BRANCH"; then
+if ! git pull --ff-only origin "$BRANCH" >/dev/null 2>&1 ; then
   echo "[replan] ERROR: Cannot fast-forward. Resolve manually."
   exit 1
 fi
 
-echo "[replan] Comparing $SOURCE to $TARGET_FILE..."
-if diff -u "$SOURCE" "$TARGET_FILE"; then
-  echo "[replan] No differences. Nothing to do."
+if diff -u "$SOURCE" "$TARGET_FILE"  >/dev/null 2>&1  ; then
+  echo "[replan] No differences. Aborted."
   exit 0
 else
   echo "[replan] Detected differences."
@@ -65,12 +62,12 @@ if [[ "${1:-}" == "-c" ]]; then
   echo "[replan] Committing and pushing..."
 
   cp "$SOURCE" "$TARGET_FILE"
-  git add "$TARGET_FILE"
+  git add "$TARGET_FILE"  >/dev/null 2>&1
 
   iso_timestamp=$(date -u +"%Y-%m-%dT%H:%MZ")
 
-  git commit -m "Update .plan ($iso_timestamp)"
-  git push origin "$BRANCH"
+  git commit -m "Update .plan ($iso_timestamp)"  >/dev/null 2>&1
+  git push origin "$BRANCH"  >/dev/null 2>&1
 
   echo "[replan] Update pushed successfully."
 else
