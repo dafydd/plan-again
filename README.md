@@ -2,7 +2,7 @@
 Make Unix-style .plan files useful again.
 
 A shell script to sync your `~/.plan` file to your GitHub profile repository as `README.md`.  
-Useful for creating a public, self-maintaining status display on your GitHub profile page.
+Useful for creating a public, self-maintaining status message on your GitHub profile page.
 
 ## Usage
 Edit or create `~/.plan` with your message to the world.
